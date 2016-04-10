@@ -43,5 +43,6 @@
     "json-pointer": "^0.5.0",
     "lodash": "^3.9.3",
     "request": "2.42.0"
-  }
+  },
+  "typings": "./lib/sparkpost.d.ts"
 }
