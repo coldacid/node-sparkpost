@@ -1,4 +1,26 @@
-declare module "sparkpost" {
+declare class SparkPost {
+  constructor(options: SparkPost.ISparkPostOptions);
+  constructor(apiKey: string, options?: SparkPost.ISparkPostOptions);
+
+  request<T>(options: SparkPost.IRequestOptions, callback: SparkPost.Callback<T>);
+  get<T>(options: SparkPost.IRequestOptions, callback: SparkPost.Callback<T>);
+  post<T>(options: SparkPost.IRequestOptions, callback: SparkPost.Callback<T>);
+  put<T>(options: SparkPost.IRequestOptions, callback: SparkPost.Callback<T>);
+  delete<T>(options: SparkPost.IRequestOptions, callback: SparkPost.Callback<T>);
+
+  inboundDomains: SparkPost.IInboundDomainsApi;
+  messageEvents: SparkPost.IMessageEventsApi;
+  recipientLists: SparkPost.IRecipientListsApi;
+  relayWebhooks: SparkPost.IRelayWebhooksApi;
+  sendingDomains: SparkPost.ISendingDomainsApi;
+  subaccounts: SparkPost.ISubaccountsApi;
+  suppressionList: SparkPost.ISuppressionListApi;
+  templates: SparkPost.ITemplatesApi;
+  transmissions: SparkPost.ITransmissionsApi;
+  webhooks: SparkPost.IWebhooksApi;
+}
+
+declare namespace SparkPost {
   export interface ISparkPostOptions {
     origin?: string;
     endpoint?: string;
@@ -16,7 +38,7 @@ declare module "sparkpost" {
   }
 
   export interface Response<T> {
-    body: T;
+    body: { results: T };
 
     statusCode: number;
     headers: { [header: string]: string; };
@@ -40,28 +62,6 @@ declare module "sparkpost" {
     message: string;
     errors: ErrorMessage[];
     statusCode: number;
-  }
-
-  export class SparkPost {
-    constructor(options: ISparkPostOptions);
-    constructor(apiKey: string, options?: ISparkPostOptions);
-
-    request<T>(options: IRequestOptions, callback: Callback<T>);
-    get<T>(options: IRequestOptions, callback: Callback<T>);
-    post<T>(options: IRequestOptions, callback: Callback<T>);
-    put<T>(options: IRequestOptions, callback: Callback<T>);
-    delete<T>(options: IRequestOptions, callback: Callback<T>);
-
-    inboundDomains: IInboundDomainsApi;
-    messageEvents: IMessageEventsApi;
-    recipientLists: IRecipientListsApi;
-    relayWebhooks: IRelayWebhooksApi;
-    sendingDomains: ISendingDomainsApi;
-    subaccounts: ISubaccountsApi;
-    suppressionList: ISuppressionListApi;
-    templates: ITemplatesApi;
-    transmissions: ITransmissionsApi;
-    webhooks: IWebhooksApi;
   }
 
   export interface Domain {
@@ -103,20 +103,20 @@ declare module "sparkpost" {
   }
 
   export interface IMessageEventsSearchParams {
-    bounce_classes?: number[];
-    campaign_ids?: string[];
+    bounceClasses?: number[];
+    campaignIds?: string[];
     events?: string[];
-    friendly_froms?: string[];
+    friendlyFroms?: string[];
     from?: string;
-    message_ids?: string[];
+    messageIds?: string[];
     page?: number;
-    per_page?: number;
+    perPage?: number;
     reason?: string;
     recipients?: string[];
-    template_ids?: string[];
+    templateIds?: string[];
     timezone?: string;
     to?: string;
-    transmission_ids?: string[];
+    transmissionIds?: string[];
   }
 
   export interface IMessageEventsApi {
@@ -125,9 +125,9 @@ declare module "sparkpost" {
 
   export interface Recipient {
     address: string | { email: string; name?: string; header_to?: string; };
-    return_path?: string;
-    tags: string[];
-    metadata: { [key: string]: string; };
+    returnPath?: string;
+    tags?: string[];
+    metadata?: { [key: string]: string; };
     substitution_data: { [key: string]: string; };
   }
 
@@ -141,11 +141,22 @@ declare module "sparkpost" {
 
   export interface IRecipientListsFindOptions {
     id: string;
-    show_recipients?: boolean;
+    showRecipients?: boolean;
   }
 
-  export interface IRecipientListsCreateOptions extends RecipientList {
-    num_rcpt_errors?: number;
+  export interface IRecipientListsCreateOptions {
+    id?: string;
+    name?: string;
+    description?: string;
+    attributes?: {};
+    recipients: {
+      address: string | { email: string; name?: string; headerTo?: string; };
+      returnPath?: string;
+      tags?: string[];
+      metadata?: {};
+      substitutionData?: {};
+    }[];
+    numRcptErrors?: number;
   }
   export interface IRecipientListsUpdateOptions extends IRecipientListsCreateOptions {
     id: string;
@@ -174,19 +185,17 @@ declare module "sparkpost" {
   }
 
   export interface IRelayWebhooksCreateOptions {
-    target: string;
-    domain: string;
     name?: string;
+    target: string;
     authToken?: string;
-    protocol: string;
+    match: { protocol?: string; domain: string; };
   }
   export interface IRelayWebhooksUpdateOptions {
     webhookId: string;
-    target?: string;
-    domain?: string;
     name?: string;
+    target?: string;
     authToken?: string;
-    protocol?: string;
+    match?: { protocol?: string; domain: string; };
   }
 
   export interface IRelayWebhooksApi {
@@ -205,41 +214,43 @@ declare module "sparkpost" {
     postmaster_at_status: string;
     compliance_status: string;
   }
-  export interface DKIM {
-    signing_domain?: string;
-    private: string;
-    public: string;
-    selector: string;
-    headers?: string;
-  }
   export interface SendingDomain {
     domain: string;
     tracking_domain?: string;
     status?: SendingDomainStatus;
-    dkim?: DKIM;
   }
 
-  export interface ISendingDomainsCreateOptions extends SendingDomain {
-    generate_dkim?: boolean;
+  export interface ISendingDomainsCreateOrUpdateOptions {
+    domain: string;
+    trackingDomain?: string;
+    dkim?: {
+      signingDomain?: string;
+      private: string;
+      public: string;
+      selector: string;
+      headers?: string;
+    };
+    generateDkim?: boolean;
   }
   export interface ISendingDomainsCreateOrUpdateResponse extends SendingDomain {
     message: string;
   }
+
   export interface ISendingDomainsVerifyOptions {
     domain: string;
-    dkim_verify?: boolean;
-    spf_verify?: boolean;
-    postmaster_at_verify?: boolean;
-    abuse_at_verify?: boolean;
-    postmaster_at_token?: boolean;
-    abuse_at_token?: boolean;
+    dkimVerify?: boolean;
+    spfVerify?: boolean;
+    postmasterAtVerify?: boolean;
+    abuseAtVerify?: boolean;
+    postmasterAtToken?: boolean;
+    abuseAtToken?: boolean;
   }
 
   export interface ISendingDomainsApi {
     all(callback: Callback<SendingDomain[]>);
     find(domain: string, callback: Callback<SendingDomain>);
-    create(domainBody: ISendingDomainsCreateOptions, callback: Callback<ISendingDomainsCreateOrUpdateResponse>);
-    update(domainBody: SendingDomain, callback: Callback<ISendingDomainsCreateOrUpdateResponse>);
+    create(domainBody: ISendingDomainsCreateOrUpdateOptions, callback: Callback<ISendingDomainsCreateOrUpdateResponse>);
+    update(domainBody: ISendingDomainsCreateOrUpdateOptions, callback: Callback<ISendingDomainsCreateOrUpdateResponse>);
     verify(options: ISendingDomainsVerifyOptions, callback: Callback<SendingDomainStatus>);
     delete(domain: string, callback: Callback<void>);
   }
@@ -252,18 +263,25 @@ declare module "sparkpost" {
     compliance_status: string;
   }
 
+  export interface ISubaccountsListResponse {
+    results: Subaccount[];
+  }
+  export interface ISubaccountsFindResponse {
+    results: Subaccount;
+  }
+
   export interface ISubaccountsCreateOptions {
     name: string;
-    key_label: string;
-    key_grants: string[];
-    key_valid_ips?: string[];
-    ip_pool?: string;
+    keyLabel: string;
+    keyGrants: string[];
+    keyValidIps?: string[];
+    ipPool?: string;
   }
-  export interface ISubaccountCreateResponse {
+  export interface ISubaccountsCreateResponse {
     subaccount_id: number;
     key: string;
     label: string;
-    short_key: string;
+    shortKey: string;
   }
 
   export interface ISubaccountsUpdateOptions {
@@ -275,9 +293,9 @@ declare module "sparkpost" {
 
   export interface ISubaccountsApi {
     all(callback: Callback<Subaccount[]>);
-    find(subaccountId: number, callback: Callback<Subaccount>);
-    create(options: ISubaccountsCreateOptions, callback: Callback<ISubaccountCreateResponse>);
-    update(options: ISubaccountsUpdateOptions, callback: Callback<{ message: string; }>);
+    find(subaccountId: number, callback: Callback<Subaccount[]>);
+    create(options: ISubaccountsCreateOptions, callback: Callback<ISubaccountsCreateResponse>);
+    update(options: ISubaccountsUpdateOptions, callback: Callback<{message: string;}>);
   }
 
   export interface SuppressionListEntry {
@@ -317,8 +335,8 @@ declare module "sparkpost" {
     name?: string;
     description?: string;
     options?: {
-      open_tracking?: boolean;
-      click_tracking?: boolean;
+      openTracking?: boolean;
+      clickTracking?: boolean;
       transactional?: boolean;
     };
   }
@@ -328,13 +346,46 @@ declare module "sparkpost" {
     draft?: boolean;
   }
 
+  export interface TemplateCreateContent {
+    html?: string;
+    text?: string;
+    subject: string;
+    from: string | { email: string; name?: string; };
+    replyTo?: string;
+    headers?: { [header: string]: string; };
+  }
+  export interface TemplateCreateContentRfc822 {
+    emailRfc822
+  }
+
   export interface ITemplateCreateOptions {
-    template: Template;
+    template: {
+      id?: string;
+      name?: string;
+      content: TemplateCreateContent | TemplateCreateContentRfc822;
+      description?: string;
+      options?: {
+        openTracking?: boolean;
+        clickTracking?: boolean;
+        transactional?: boolean;
+        inlineCss?: boolean;
+      }
+    };
   }
   export interface ITemplateUpdateOptions {
     id: string;
-    update_published?: boolean;
-    template: Template | { published: boolean; };
+    updatePublished?: boolean;
+    template: {
+      name?: string;
+      content?: TemplateCreateContent | TemplateCreateContentRfc822;
+      description?: string;
+      options?: {
+        openTracking?: boolean;
+        clickTracking?: boolean;
+        transactional?: boolean;
+        inlineCss?: boolean;
+      };
+    } | { published: boolean; };
   }
 
   export interface ITemplatePreviewOptions {
@@ -416,8 +467,34 @@ declare module "sparkpost" {
   }
 
   export interface ITransmissionsSendOptions {
-    transmissionBody: Transmission;
-    num_rcpt_errors?: number;
+    transmissionBody: {
+      id?: string;
+      state?: string;
+      options?: {
+        startTime?: string;
+        openTracking?: boolean;
+        clickTracking?: boolean;
+        transactional?: boolean;
+        sandbox?: boolean;
+        skipSuppression?: boolean;
+        ipPool?: string;
+        inlineCss?: boolean;
+      };
+      recipients: { listId: string; } | {
+        address: string | { email: string; name?: string; headerTo?: string; };
+        returnPath?: string;
+        tags?: string[];
+        metadata?: {};
+        substitutionData?: {};
+      }[];
+      campaignId?: string;
+      description?: string;
+      metadata?: {};
+      substitutionData?: {};
+      returnPath: string;
+      content: TemplateCreateContent | TemplateCreateContentRfc822 | { templateId: string; useDraftTemplate?: boolean };
+    };
+    numRcptErrors?: number;
   }
   export interface ITransmissionsSendResult {
     total_rejected_recipients: number;
@@ -428,8 +505,8 @@ declare module "sparkpost" {
   }
 
   export interface ITransmissionsSearchParams {
-    campaign_id?: string;
-    template_id?: string;
+    campaignId?: string;
+    templateId?: string;
   }
 
   export interface ITransmissionsApi {
@@ -461,15 +538,24 @@ declare module "sparkpost" {
     last_failure?: string;
   }
 
+  export interface IWebhooksCreateOptions {
+    name: string;
+    target: string;
+    events: string[];
+    authType?: string;
+    authRequestDetails?: {};
+    authCredentials?: {};
+    authToken?: string;
+  }
   export interface IWebhooksUpdateOptions {
     id: string;
     name?: string;
     target?: string;
     events?: string[];
-    auth_type?: string;
-    auth_request_details?: {};
-    auth_credentials?: {};
-    auth_token?: string;
+    authType?: string;
+    authRequestDetails?: {};
+    authCredentials?: {};
+    authToken?: string;
   }
 
   export interface IWebhooksValidateOptions {
@@ -522,7 +608,7 @@ declare module "sparkpost" {
     all(callback: Callback<WebhookDetails[]>);
     all(options: { timezone: string; }, callback: Callback<WebhookDetails[]>);
     describe(options: { id: string; timezone?: string; }, callback: Callback<WebhookResult>);
-    create(webhook: Webhook, callback: Callback<WebhookResult>);
+    create(webhook: IWebhooksCreateOptions, callback: Callback<WebhookResult>);
     update(webhook: IWebhooksUpdateOptions, callback: Callback<WebhookResult>);
     validate(options: IWebhooksUpdateOptions, callback: Callback<IWebhooksValidateResult>);
     getBatchStatus(options: IWebhooksBatchStatusOptions, callback: Callback<IWebhooksBatchStatusResult[]>);
@@ -532,4 +618,8 @@ declare module "sparkpost" {
     getSamples(callback: Callback<IWebhooksSample[]>);
     getSamples(options: { events: string; }, callback: Callback<IWebhooksSample[]>);
   }
+}
+
+declare module "sparkpost" {
+  export = SparkPost;
 }
